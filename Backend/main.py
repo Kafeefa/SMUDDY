@@ -1,7 +1,10 @@
 from fastapi import FastAPI, UploadFile, File
 import os
 from pypdf import PdfReader
-
+from vector_store import (
+    add_chunks,
+    search_chunks
+)
 from utils import chunk_text
 
 app = FastAPI()
@@ -9,6 +12,7 @@ UPLOAD_FOLDER = "uploads"
 
 #creates folder if not found
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 #home
 @app.get("/")
@@ -68,8 +72,20 @@ def get_chunks(filename:str):
         if page_text:
             text+=page_text+"\n"
     chunks=chunk_text(text)
+    add_chunks(chunks)
 
     return{
         "total_chunks":len(chunks),
         "chunks":chunks[:5]
     }
+@app.get("/ask")
+def ask(question: str):
+
+    results = search_chunks(question)
+
+    return {
+        "question": question,
+        "relevant_chunks": results
+    }
+
+
