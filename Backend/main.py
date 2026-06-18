@@ -1,7 +1,11 @@
 from fastapi import FastAPI, UploadFile, File
 import os
-from pypdf import PdfReader
-
+import pdfplumber 
+from vector_store import (
+    add_chunks,
+    search_chunks,
+    index,model,chunks_store
+)
 from utils import chunk_text
 
 app = FastAPI()
@@ -9,6 +13,7 @@ UPLOAD_FOLDER = "uploads"
 
 #creates folder if not found
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 #home
 @app.get("/")
@@ -43,10 +48,11 @@ def extract_text(filename:str):
         UPLOAD_FOLDER,filename
     )
 
-    reader=PdfReader(file_path)
+   
     text=" "
-    for page in reader.pages:
-        text+=page.extract_text()+"\n"
+    with pdfplumber.open(file_path) as pdf:
+        for page in pdf.pages:
+            text+=page.extract_text()+"\n"
 
     return{
         "filename":filename,
@@ -60,16 +66,35 @@ def get_chunks(filename:str):
         UPLOAD_FOLDER,filename
     )
 
-    reader= PdfReader(file_path)
+    reader= pdfplumber.open(file_path)
     text=" "
-
-    for page in reader.pages:
-        page_text=page.extract_text()
+    with pdfplumber.open(file_path)as reader:
+        for page in reader.pages:
+            page_text=page.extract_text()
         if page_text:
             text+=page_text+"\n"
     chunks=chunk_text(text)
+    add_chunks(chunks)
 
     return{
         "total_chunks":len(chunks),
         "chunks":chunks[:5]
     }
+@app.get("/ask")
+def ask(question: str):
+
+    results = search_chunks(question)
+
+    return {
+        "question": question,
+        "relevant_chunks": results
+    }
+
+@app.get("/debug")
+def debug():
+    return {
+        "vectors": index.ntotal,
+        "chunks": len(chunks_store)
+    }
+
+
