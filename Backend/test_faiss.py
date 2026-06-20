@@ -15,7 +15,7 @@ texts = [
 embeddings = model.encode(texts)
 
 print("Embedding shape:", embeddings.shape)
-
+#eg:(3,384)=>shape[1]=384
 dimension = embeddings.shape[1]
 
 index = faiss.IndexFlatL2(dimension)
